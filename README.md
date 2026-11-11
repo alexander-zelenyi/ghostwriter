@@ -1,5 +1,7 @@
 # ghostwriter
 
+[![agent CI](https://github.com/alexander-zelenyi/ghostwriter/actions/workflows/agent-ci.yml/badge.svg)](https://github.com/alexander-zelenyi/ghostwriter/actions/workflows/agent-ci.yml)
+
 An AI assistant that answers Telegram messages on behalf of its owner,
 built with [LangGraph](https://langchain-ai.github.io/langgraph/).
 
