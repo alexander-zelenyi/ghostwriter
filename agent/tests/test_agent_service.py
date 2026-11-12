@@ -11,7 +11,7 @@ async def test_first_message_gets_a_reply_and_waits_for_the_next_one(
 ) -> None:
     service, _ = make_service([AIMessage("Hi! How are you?")])
 
-    reply = await service.reply("thread-1", "Hello")
+    reply = await service.reply("thread-1", message_id="m1", text="Hello")
 
     assert reply.text == "Hi! How are you?"
     assert not reply.is_finished
@@ -20,7 +20,7 @@ async def test_first_message_gets_a_reply_and_waits_for_the_next_one(
 async def test_model_gets_system_prompt_and_tools(make_service: ServiceFactory) -> None:
     service, model = make_service([AIMessage("Hi!")])
 
-    await service.reply("thread-1", "Hello")
+    await service.reply("thread-1", message_id="m1", text="Hello")
 
     system_message, user_message = model.calls[0]
     assert isinstance(system_message, SystemMessage)
@@ -32,8 +32,8 @@ async def test_model_gets_system_prompt_and_tools(make_service: ServiceFactory) 
 async def test_next_message_resumes_the_same_conversation(make_service: ServiceFactory) -> None:
     service, model = make_service([AIMessage("Hi!"), AIMessage("Fine, thanks.")])
 
-    await service.reply("thread-1", "Hello")
-    reply = await service.reply("thread-1", "How are you?")
+    await service.reply("thread-1", message_id="m1", text="Hello")
+    reply = await service.reply("thread-1", message_id="m2", text="How are you?")
 
     assert reply.text == "Fine, thanks."
     history = [message.text for message in model.calls[1][1:]]
@@ -45,9 +45,9 @@ async def test_threads_are_isolated(make_service: ServiceFactory) -> None:
         [AIMessage("Hi, A!"), AIMessage("Hi, B!"), AIMessage("Nice to meet you too, A!")]
     )
 
-    await service.reply("thread-a", "I am A")
-    await service.reply("thread-b", "I am B")
-    await service.reply("thread-a", "Nice to meet you!")
+    await service.reply("thread-a", message_id="m1", text="I am A")
+    await service.reply("thread-b", message_id="m2", text="I am B")
+    await service.reply("thread-a", message_id="m3", text="Nice to meet you!")
 
     assert [message.text for message in model.calls[0][1:]] == ["I am A"]
     assert [message.text for message in model.calls[1][1:]] == ["I am B"]
@@ -66,7 +66,7 @@ async def test_tool_call_is_executed_and_result_goes_back_to_the_model(
         [AIMessage("", tool_calls=[tool_call]), AIMessage("It is 12:30 UTC.")]
     )
 
-    reply = await service.reply("thread-1", "What time is it?")
+    reply = await service.reply("thread-1", message_id="m1", text="What time is it?")
 
     assert reply.text == "It is 12:30 UTC."
     tool_message = model.calls[1][-1]
@@ -77,8 +77,8 @@ async def test_tool_call_is_executed_and_result_goes_back_to_the_model(
 async def test_quit_command_finishes_the_conversation(make_service: ServiceFactory) -> None:
     service, model = make_service([AIMessage("Hi!")])
 
-    await service.reply("thread-1", "Hello")
-    reply = await service.reply("thread-1", QUIT_COMMAND)
+    await service.reply("thread-1", message_id="m1", text="Hello")
+    reply = await service.reply("thread-1", message_id="m2", text=QUIT_COMMAND)
 
     assert reply.is_finished
     assert reply.text is None
@@ -90,9 +90,9 @@ async def test_message_after_quit_starts_a_new_run_with_the_old_history(
 ) -> None:
     service, model = make_service([AIMessage("Hi!"), AIMessage("Welcome back!")])
 
-    await service.reply("thread-1", "Hello")
-    await service.reply("thread-1", QUIT_COMMAND)
-    reply = await service.reply("thread-1", "I'm back")
+    await service.reply("thread-1", message_id="m1", text="Hello")
+    await service.reply("thread-1", message_id="m2", text=QUIT_COMMAND)
+    reply = await service.reply("thread-1", message_id="m3", text="I'm back")
 
     assert reply.text == "Welcome back!"
     assert not reply.is_finished

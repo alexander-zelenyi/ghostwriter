@@ -36,7 +36,7 @@ async def main() -> None:
         print(f"Chatting in thread {thread_id}. Type {QUIT_COMMAND} to exit.")
         while True:
             text = await asyncio.to_thread(input, "you> ")
-            reply = await service.reply(thread_id, text)
+            reply = await service.reply(thread_id, message_id=str(uuid.uuid4()), text=text)
             if reply.text:
                 print(f"agent> {reply.text}")
             if reply.is_finished:

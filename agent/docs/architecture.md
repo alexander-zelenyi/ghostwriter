@@ -12,7 +12,7 @@ ghostwriter_agent/
 ├── ports/         Protocols for external services the core needs
 ├── adapters/      implementations of ports (system clock, YAML prompts, LLM, later Postgres)
 ├── tools/         tools the LLM can call
-├── application/   AgentService: the API of the agent for the outside world
+├── application/   AgentService (the API of the agent for the outside world) and its ports
 ├── config.py      settings from environment variables
 └── bootstrap.py   composition root: wires adapters into the core
 ```
@@ -21,9 +21,15 @@ Dependency direction (arrows mean "imports"):
 
 ```
 bootstrap ──> adapters ──> ports <── core <── application
-    │                                 ^
+    │             │                   ^           ^
+    │             └───────────────────┼───────────┘  (application ports)
     └──> tools ───────────────────────┘
 ```
+
+There are two kinds of ports. `ports/` holds what the core (graph, tools) needs;
+`application/ports.py` holds what `AgentService` needs, such as `ProcessedMessages`.
+Application ports use application types (`AgentReply`), so placing them in `ports/`
+would create an import cycle `ports -> application -> core -> ports`.
 
 `core` never imports `adapters` or `bootstrap`. That is what makes it possible to
 run the whole graph in tests with fakes, and to swap DeepSeek for another provider
@@ -83,10 +89,20 @@ with `isinstance`, which a Protocol only supports when it is runtime-checkable.
 
 ## AgentService
 
-`AgentService.reply(thread_id, text)` is the only thing callers need. It reads the
-thread's checkpoint: if the graph is paused in `human`, the message resumes it;
+`AgentService.reply(thread_id, message_id=..., text=...)` is the only thing callers need.
+It reads the thread's checkpoint: if the graph is paused in `human`, the message resumes it;
 otherwise a new run starts (the checkpointer still provides the earlier history).
 A thread is one conversation; later the Telegram chat id will be used as the thread id.
+
+Two guarantees for callers that retry or send messages concurrently:
+
+- **One message at a time per thread.** Each thread has an `asyncio.Lock`; different
+  threads run in parallel. The lock is in-process, so it holds for one worker and one replica.
+- **Idempotency by `(thread_id, message_id)`.** A redelivered message gets the saved reply
+  from `ProcessedMessages` without calling the LLM. A reply is saved only after success, so a
+  failed message can be retried. The `HumanMessage` carries `id=message_id`, and
+  `add_messages` replaces a message with the same id: if a failed attempt already wrote the
+  message to the history, the retry does not duplicate it.
 
 ## How SOLID shows up
 

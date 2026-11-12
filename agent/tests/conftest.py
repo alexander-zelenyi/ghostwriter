@@ -6,7 +6,7 @@ import pytest
 from langchain_core.messages import AIMessage
 from langgraph.checkpoint.memory import InMemorySaver
 
-from ghostwriter_agent.adapters import YamlPromptReader
+from ghostwriter_agent.adapters import InMemoryProcessedMessages, YamlPromptReader
 from ghostwriter_agent.application import AgentService
 from ghostwriter_agent.core import AgentContext, build_graph
 from ghostwriter_agent.tools import DEFAULT_TOOLS
@@ -20,7 +20,7 @@ PROMPTS_DIR = Path(__file__).parents[1] / "prompts"
 
 class ServiceFactory(Protocol):
     def __call__(
-        self, responses: list[AIMessage], *, delay: float = 0.0
+        self, responses: list[AIMessage | Exception], *, delay: float = 0.0
     ) -> tuple[AgentService, ScriptedChatModel]: ...
 
 
@@ -29,7 +29,7 @@ def make_service() -> ServiceFactory:
     """Build a fully wired service with fake adapters, the same way bootstrap does."""
 
     def factory(
-        responses: list[AIMessage], *, delay: float = 0.0
+        responses: list[AIMessage | Exception], *, delay: float = 0.0
     ) -> tuple[AgentService, ScriptedChatModel]:
         model = ScriptedChatModel(responses=responses, delay=delay)
         context = AgentContext(
@@ -39,6 +39,9 @@ def make_service() -> ServiceFactory:
             owner_name=OWNER_NAME,
         )
         graph = build_graph(tools=DEFAULT_TOOLS, checkpointer=InMemorySaver())
-        return AgentService(graph=graph, context=context), model
+        service = AgentService(
+            graph=graph, context=context, processed_messages=InMemoryProcessedMessages()
+        )
+        return service, model
 
     return factory
