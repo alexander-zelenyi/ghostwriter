@@ -1,6 +1,6 @@
-from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Protocol
 
 import pytest
 from langchain_core.messages import AIMessage
@@ -17,15 +17,21 @@ OWNER_NAME = "Alex"
 # The real prompt files are used, so the tests also check that they load and render.
 PROMPTS_DIR = Path(__file__).parents[1] / "prompts"
 
-type ServiceFactory = Callable[[list[AIMessage]], tuple[AgentService, ScriptedChatModel]]
+
+class ServiceFactory(Protocol):
+    def __call__(
+        self, responses: list[AIMessage], *, delay: float = 0.0
+    ) -> tuple[AgentService, ScriptedChatModel]: ...
 
 
 @pytest.fixture
 def make_service() -> ServiceFactory:
     """Build a fully wired service with fake adapters, the same way bootstrap does."""
 
-    def factory(responses: list[AIMessage]) -> tuple[AgentService, ScriptedChatModel]:
-        model = ScriptedChatModel(responses=responses)
+    def factory(
+        responses: list[AIMessage], *, delay: float = 0.0
+    ) -> tuple[AgentService, ScriptedChatModel]:
+        model = ScriptedChatModel(responses=responses, delay=delay)
         context = AgentContext(
             model=model,
             clock=FixedClock(FIXED_NOW),

@@ -1,5 +1,6 @@
 """Test doubles for the ports and the chat model."""
 
+import asyncio
 from collections.abc import Sequence
 from datetime import datetime
 from typing import Any
@@ -22,8 +23,11 @@ class ScriptedChatModel(BaseChatModel):
     """Chat model that returns pre-defined responses and records what it was sent."""
 
     responses: list[AIMessage]
+    delay: float = 0.0
     calls: list[list[BaseMessage]] = Field(default_factory=list)
     bound_tool_names: list[str] = Field(default_factory=list)
+    active_calls: int = 0
+    max_active_calls: int = 0
 
     @property
     def _llm_type(self) -> str:
@@ -44,3 +48,18 @@ class ScriptedChatModel(BaseChatModel):
         if not self.responses:
             raise AssertionError("ScriptedChatModel ran out of responses")
         return ChatResult(generations=[ChatGeneration(message=self.responses.pop(0))])
+
+    async def _agenerate(
+        self,
+        messages: list[BaseMessage],
+        stop: list[str] | None = None,
+        run_manager: Any = None,
+        **kwargs: Any,
+    ) -> ChatResult:
+        self.active_calls += 1
+        self.max_active_calls = max(self.max_active_calls, self.active_calls)
+        try:
+            await asyncio.sleep(self.delay)
+            return self._generate(messages, stop, **kwargs)
+        finally:
+            self.active_calls -= 1
