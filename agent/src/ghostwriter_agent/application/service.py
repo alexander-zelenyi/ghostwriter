@@ -4,6 +4,8 @@ It hides LangGraph details such as checkpoints and interrupts behind
 one method: "here is a message in this conversation, give me the reply".
 """
 
+import asyncio
+from collections import defaultdict
 from dataclasses import dataclass
 
 from langchain_core.messages import AIMessage, HumanMessage
@@ -23,6 +25,7 @@ class AgentService:
     def __init__(self, graph: AgentGraph, context: AgentContext) -> None:
         self._graph = graph
         self._context = context
+        self._thread_locks: defaultdict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
 
     async def reply(self, thread_id: str, text: str) -> AgentReply:
         """Send a user message to the conversation `thread_id` and return the agent's reply.
@@ -30,7 +33,12 @@ class AgentService:
         A thread is one conversation (later: one Telegram chat). If the graph is
         paused in the human node, the message resumes it; otherwise a new run starts
         and the checkpointer still provides the earlier history of the thread.
+        Messages in the same thread are processed one at a time, in arrival order.
         """
+        async with self._thread_locks[thread_id]:
+            return await self._run_graph(thread_id, text)
+
+    async def _run_graph(self, thread_id: str, text: str) -> AgentReply:
         config: RunnableConfig = {"configurable": {"thread_id": thread_id}}
         snapshot = await self._graph.aget_state(config)
 
