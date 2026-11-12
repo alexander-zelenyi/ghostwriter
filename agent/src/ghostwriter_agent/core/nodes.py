@@ -34,7 +34,9 @@ async def agent_node(
 def human_node(state: AgentState) -> StateUpdate:
     """Pause the graph until the next user message arrives."""
 
-    text = interrupt(HUMAN_INPUT_REQUEST)
-    if not isinstance(text, str):
-        raise TypeError(f"Expected the resume value to be a str, got {type(text).__name__}")
-    return {"messages": [HumanMessage(content=text)]}
+    message = interrupt(HUMAN_INPUT_REQUEST)
+    if not isinstance(message, HumanMessage):
+        raise TypeError(
+            f"Expected the resume value to be a HumanMessage, got {type(message).__name__}"
+        )
+    return {"messages": [message]}

@@ -8,7 +8,7 @@ from typing import Any
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage
 from langchain_core.outputs import ChatGeneration, ChatResult
-from pydantic import Field
+from pydantic import Field, SkipValidation
 
 
 class FixedClock:
@@ -20,9 +20,12 @@ class FixedClock:
 
 
 class ScriptedChatModel(BaseChatModel):
-    """Chat model that returns pre-defined responses and records what it was sent."""
+    """Chat model that returns pre-defined responses and records what it was sent.
 
-    responses: list[AIMessage]
+    An exception in `responses` is raised instead of answering, to simulate an LLM failure.
+    """
+
+    responses: SkipValidation[list[AIMessage | Exception]]
     delay: float = 0.0
     calls: list[list[BaseMessage]] = Field(default_factory=list)
     bound_tool_names: list[str] = Field(default_factory=list)
@@ -47,7 +50,10 @@ class ScriptedChatModel(BaseChatModel):
         self.calls.append(list(messages))
         if not self.responses:
             raise AssertionError("ScriptedChatModel ran out of responses")
-        return ChatResult(generations=[ChatGeneration(message=self.responses.pop(0))])
+        response = self.responses.pop(0)
+        if isinstance(response, Exception):
+            raise response
+        return ChatResult(generations=[ChatGeneration(message=response)])
 
     async def _agenerate(
         self,
