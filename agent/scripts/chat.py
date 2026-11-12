@@ -29,18 +29,18 @@ def use_utf8_console() -> None:
 
 async def main() -> None:
     use_utf8_console()
-    service = build_agent_service(Settings())  # type: ignore[call-arg]  # values come from env
+    settings = Settings()  # type: ignore[call-arg]  # values come from env
     thread_id = str(uuid.uuid4())
-    print(f"Chatting in thread {thread_id}. Type {QUIT_COMMAND} to exit.")
 
-    while True:
-        # `input()` blocks, so it runs in a worker thread to keep the event loop free.
-        text = await asyncio.to_thread(input, "you> ")
-        reply = await service.reply(thread_id, text)
-        if reply.text:
-            print(f"agent> {reply.text}")
-        if reply.is_finished:
-            break
+    async with build_agent_service(settings) as service:
+        print(f"Chatting in thread {thread_id}. Type {QUIT_COMMAND} to exit.")
+        while True:
+            text = await asyncio.to_thread(input, "you> ")
+            reply = await service.reply(thread_id, text)
+            if reply.text:
+                print(f"agent> {reply.text}")
+            if reply.is_finished:
+                break
 
 
 if __name__ == "__main__":

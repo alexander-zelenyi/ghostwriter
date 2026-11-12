@@ -5,6 +5,9 @@ To swap an implementation (another LLM, a Postgres checkpointer, a fake clock)
 you change this file, not the core.
 """
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import InMemorySaver
 
@@ -15,9 +18,11 @@ from ghostwriter_agent.core import AgentContext, build_graph
 from ghostwriter_agent.tools import DEFAULT_TOOLS
 
 
-def build_agent_service(
+@asynccontextmanager
+async def build_agent_service(
     settings: Settings, checkpointer: BaseCheckpointSaver | None = None
-) -> AgentService:
+) -> AsyncIterator[AgentService]:
+    """Build the agent service and release its resources on exit."""
     context = AgentContext(
         model=create_chat_model(settings.llm),
         clock=SystemClock(),
@@ -25,4 +30,4 @@ def build_agent_service(
         owner_name=settings.owner_name,
     )
     graph = build_graph(tools=DEFAULT_TOOLS, checkpointer=checkpointer or InMemorySaver())
-    return AgentService(graph=graph, context=context)
+    yield AgentService(graph=graph, context=context)
