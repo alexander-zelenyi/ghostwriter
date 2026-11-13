@@ -24,3 +24,30 @@ class Reply(BaseModel):
 class MessageResponse(BaseModel):
     status: ReplyStatus
     reply: Reply | None = Field(description="Present only when status is `replied`.")
+
+
+class ErrorCode(StrEnum):
+    INVALID_REQUEST = "invalid_request"
+    LLM_UNAVAILABLE = "llm_unavailable"
+    INTERNAL_ERROR = "internal_error"
+
+
+class FieldError(BaseModel):
+    loc: list[str | int]
+    msg: str
+    type: str
+
+
+class ErrorDetail(BaseModel):
+    code: str = Field(
+        description="`invalid_request`, `llm_unavailable`, `internal_error`, or the snake_case "
+        "name of the HTTP status (`not_found`, `method_not_allowed`, ...)."
+    )
+    message: str
+    details: list[FieldError] | None = Field(
+        default=None, description="Invalid fields, for `invalid_request`."
+    )
+
+
+class ErrorResponse(BaseModel):
+    error: ErrorDetail
