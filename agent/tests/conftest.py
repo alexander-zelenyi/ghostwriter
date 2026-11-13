@@ -10,7 +10,7 @@ from ghostwriter_agent.adapters import InMemoryProcessedMessages, YamlPromptRead
 from ghostwriter_agent.application import AgentService
 from ghostwriter_agent.core import AgentContext, build_graph
 from ghostwriter_agent.tools import DEFAULT_TOOLS
-from tests.fakes import FixedClock, ScriptedChatModel
+from tests.fakes import FakeLLMError, FixedClock, ScriptedChatModel
 
 FIXED_NOW = datetime(2026, 1, 15, 12, 30, tzinfo=UTC)
 OWNER_NAME = "Alex"
@@ -40,7 +40,10 @@ def make_service() -> ServiceFactory:
         )
         graph = build_graph(tools=DEFAULT_TOOLS, checkpointer=InMemorySaver())
         service = AgentService(
-            graph=graph, context=context, processed_messages=InMemoryProcessedMessages()
+            graph=graph,
+            context=context,
+            processed_messages=InMemoryProcessedMessages(),
+            llm_errors=(FakeLLMError,),
         )
         return service, model
 

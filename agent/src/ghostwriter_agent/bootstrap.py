@@ -12,6 +12,7 @@ from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import InMemorySaver
 
 from ghostwriter_agent.adapters import (
+    LLM_ERRORS,
     InMemoryProcessedMessages,
     SystemClock,
     YamlPromptReader,
@@ -35,4 +36,9 @@ async def build_agent_service(
         owner_name=settings.owner_name,
     )
     graph = build_graph(tools=DEFAULT_TOOLS, checkpointer=checkpointer or InMemorySaver())
-    yield AgentService(graph=graph, context=context, processed_messages=InMemoryProcessedMessages())
+    yield AgentService(
+        graph=graph,
+        context=context,
+        processed_messages=InMemoryProcessedMessages(),
+        llm_errors=LLM_ERRORS,
+    )
