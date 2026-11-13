@@ -12,6 +12,7 @@ from functools import partial
 
 from fastapi import FastAPI
 
+from ghostwriter_agent.api.errors import register_error_handlers
 from ghostwriter_agent.api.routes import router
 from ghostwriter_agent.application import AgentService
 from ghostwriter_agent.bootstrap import build_agent_service
@@ -33,5 +34,6 @@ def create_app(service_factory: ServiceFactory | None = None) -> FastAPI:
             yield
 
     app = FastAPI(title="Ghostwriter agent", version="0.1.0", lifespan=lifespan)
+    register_error_handlers(app)
     app.include_router(router)
     return app

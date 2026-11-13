@@ -1,32 +1,14 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-import httpx
 from langchain_core.messages import AIMessage
 
 from ghostwriter_agent.api.app import create_app
 from ghostwriter_agent.application import AgentService
 from ghostwriter_agent.core import QUIT_COMMAND
-from tests.conftest import ServiceFactory
+from tests.conftest import ServiceFactory, api_client
 
 URL = "/v1/threads/thread-1/messages"
-
-
-@asynccontextmanager
-async def api_client(service: AgentService) -> AsyncGenerator[httpx.AsyncClient]:
-    """Client for the app wired to `service`. `ASGITransport` does not run the lifespan itself."""
-
-    @asynccontextmanager
-    async def service_factory() -> AsyncGenerator[AgentService]:
-        yield service
-
-    app = create_app(service_factory=service_factory)
-    transport = httpx.ASGITransport(app=app)
-    async with (
-        app.router.lifespan_context(app),
-        httpx.AsyncClient(transport=transport, base_url="http://agent") as client,
-    ):
-        yield client
 
 
 async def test_message_gets_a_reply(make_service: ServiceFactory) -> None:

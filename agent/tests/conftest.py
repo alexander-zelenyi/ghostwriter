@@ -1,12 +1,16 @@
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Protocol
 
+import httpx
 import pytest
 from langchain_core.messages import AIMessage
 from langgraph.checkpoint.memory import InMemorySaver
 
 from ghostwriter_agent.adapters import InMemoryProcessedMessages, YamlPromptReader
+from ghostwriter_agent.api.app import create_app
 from ghostwriter_agent.application import AgentService
 from ghostwriter_agent.core import AgentContext, build_graph
 from ghostwriter_agent.tools import DEFAULT_TOOLS
@@ -48,3 +52,25 @@ def make_service() -> ServiceFactory:
         return service, model
 
     return factory
+
+
+@asynccontextmanager
+async def api_client(
+    service: AgentService, *, raise_app_exceptions: bool = True
+) -> AsyncGenerator[httpx.AsyncClient]:
+    """Client for the app wired to `service`. `ASGITransport` does not run the lifespan itself.
+
+    `raise_app_exceptions=False` returns the 500 response instead of raising in the test.
+    """
+
+    @asynccontextmanager
+    async def service_factory() -> AsyncGenerator[AgentService]:
+        yield service
+
+    app = create_app(service_factory=service_factory)
+    transport = httpx.ASGITransport(app=app, raise_app_exceptions=raise_app_exceptions)
+    async with (
+        app.router.lifespan_context(app),
+        httpx.AsyncClient(transport=transport, base_url="http://agent") as client,
+    ):
+        yield client
