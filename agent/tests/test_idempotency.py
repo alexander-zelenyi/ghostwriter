@@ -3,7 +3,9 @@ import asyncio
 import pytest
 from langchain_core.messages import AIMessage
 
+from ghostwriter_agent.application import AgentUnavailableError
 from tests.conftest import ServiceFactory
+from tests.fakes import FakeLLMError
 
 
 async def test_redelivered_message_gets_the_saved_reply_without_calling_the_llm(
@@ -47,11 +49,11 @@ async def test_failed_message_is_processed_again_without_duplicating_history(
     make_service: ServiceFactory,
 ) -> None:
     service, model = make_service(
-        [AIMessage("Hi!"), RuntimeError("LLM is down"), AIMessage("Fine, thanks.")]
+        [AIMessage("Hi!"), FakeLLMError("LLM is down"), AIMessage("Fine, thanks.")]
     )
     await service.reply("thread-1", message_id="m1", text="Hello")
 
-    with pytest.raises(RuntimeError):
+    with pytest.raises(AgentUnavailableError):
         await service.reply("thread-1", message_id="m2", text="How are you?")
     reply = await service.reply("thread-1", message_id="m2", text="How are you?")
 

@@ -11,6 +11,10 @@ from langchain_core.outputs import ChatGeneration, ChatResult
 from pydantic import Field, SkipValidation
 
 
+class FakeLLMError(Exception):
+    """Stands in for a provider error such as a timeout or a 5xx response."""
+
+
 class FixedClock:
     def __init__(self, moment: datetime) -> None:
         self._moment = moment

@@ -8,6 +8,7 @@ dependencies = [
     "langchain-core>=1.6.8",
     "langchain-deepseek>=1.1.1",
     "langgraph>=1.2.14",
+    "openai>=3.49.0",
     "pydantic>=2.14.0",
     "pydantic-settings>=2.15.0",
     "pyyaml>=6.0.3",

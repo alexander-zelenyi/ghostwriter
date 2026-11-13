@@ -17,6 +17,13 @@ def make_settings() -> Settings:
     )
 
 
+def test_llm_timeout_and_retries_have_defaults() -> None:
+    llm = make_settings().llm
+
+    assert llm.timeout == 30.0
+    assert llm.max_retries == 2
+
+
 async def test_build_agent_service_yields_a_service() -> None:
     async with build_agent_service(make_settings()) as service:
         assert isinstance(service, AgentService)

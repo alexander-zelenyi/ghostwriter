@@ -104,6 +104,14 @@ Two guarantees for callers that retry or send messages concurrently:
   `add_messages` replaces a message with the same id: if a failed attempt already wrote the
   message to the history, the retry does not duplicate it.
 
+**Errors of the language model.** The provider SDK retries timeouts, 429 and 5xx itself
+(`LANGUAGE_MODEL_TIMEOUT`, `LANGUAGE_MODEL_MAX_RETRIES`); retries are configured only there, not
+with LangGraph's `RetryPolicy`, so attempts do not multiply. If the model still fails,
+`AgentService` raises `AgentUnavailableError` (from `application/errors.py`). Which exceptions
+count as model failures is decided by the LLM adapter (`adapters.LLM_ERRORS`) and passed to the
+service in `bootstrap.py`, so the application layer does not import the provider SDK. Other
+exceptions (bugs) are not wrapped.
+
 ## How SOLID shows up
 
 - **S**: nodes, routing, prompts, graph assembly, settings and wiring are separate modules.
