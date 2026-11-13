@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "LangGraph agent that replies to Telegram messages on behalf of its owner."
 requires-python = ">=3.12"
 dependencies = [
+    "fastapi>=0.162.5",
     "langchain>=1.4.3",
     "langchain-core>=1.6.8",
     "langchain-deepseek>=1.1.1",
@@ -12,6 +13,7 @@ dependencies = [
     "pydantic>=2.14.0",
     "pydantic-settings>=2.15.0",
     "pyyaml>=6.0.3",
+    "uvicorn[standard]>=0.54.0",
 ]
 
 [build-system]
@@ -32,9 +34,14 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 
 [dependency-groups]
 dev = [
+    "fastapi-cli>=0.0.33",
+    "httpx>=0.28.1",
     "pyrefly>=1.4.1",
     "pytest>=9.2.0",
     "pytest-asyncio>=1.4.1.post1",
     "ruff>=0.17.4",
     "types-pyyaml>=6.0.12.20261111",
 ]
+
+[tool.fastapi]
+entrypoint = "ghostwriter_agent.api.main:app"
