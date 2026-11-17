@@ -12,6 +12,8 @@ from functools import partial
 
 from fastapi import FastAPI
 
+from ghostwriter_agent.api import health
+from ghostwriter_agent.api.access_log import hide_health_checks_from_access_log
 from ghostwriter_agent.api.errors import register_error_handlers
 from ghostwriter_agent.api.routes import router
 from ghostwriter_agent.application import AgentService
@@ -40,4 +42,6 @@ def create_app(
     app.state.api_token = settings.api_token
     register_error_handlers(app)
     app.include_router(router)
+    app.include_router(health.router)
+    hide_health_checks_from_access_log()
     return app
