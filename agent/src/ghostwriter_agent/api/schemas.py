@@ -1,6 +1,7 @@
 """DTOs of the HTTP contract. They change independently of `AgentReply`."""
 
 from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -51,3 +52,7 @@ class ErrorDetail(BaseModel):
 
 class ErrorResponse(BaseModel):
     error: ErrorDetail
+
+
+class HealthResponse(BaseModel):
+    status: Literal["ok"] = "ok"
