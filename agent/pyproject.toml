@@ -45,3 +45,7 @@ dev = [
 
 [tool.fastapi]
 entrypoint = "ghostwriter_agent.api.main:app"
+
+[tool.pyrefly]
+preset = "default"
+search-path = ["src", "."]

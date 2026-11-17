@@ -1,6 +1,7 @@
 """Exception handlers: every error is returned as `ErrorResponse` with a machine-readable code."""
 
 import logging
+from collections.abc import Mapping
 from http import HTTPStatus
 
 from fastapi import FastAPI, Request
@@ -17,10 +18,11 @@ RETRY_AFTER_SECONDS = 30
 
 
 def register_error_handlers(app: FastAPI) -> None:
-    app.add_exception_handler(AgentUnavailableError, agent_unavailable_handler)
-    app.add_exception_handler(RequestValidationError, validation_error_handler)
-    app.add_exception_handler(StarletteHTTPException, http_error_handler)
-    app.add_exception_handler(Exception, internal_error_handler)
+    # The decorator form, because Starlette types `add_exception_handler` for `Exception` only.
+    app.exception_handler(AgentUnavailableError)(agent_unavailable_handler)
+    app.exception_handler(RequestValidationError)(validation_error_handler)
+    app.exception_handler(StarletteHTTPException)(http_error_handler)
+    app.exception_handler(Exception)(internal_error_handler)
 
 
 def error_response(
@@ -29,7 +31,7 @@ def error_response(
     message: str,
     *,
     details: list[FieldError] | None = None,
-    headers: dict[str, str] | None = None,
+    headers: Mapping[str, str] | None = None,
 ) -> JSONResponse:
     body = ErrorResponse(error=ErrorDetail(code=code, message=message, details=details))
     return JSONResponse(
