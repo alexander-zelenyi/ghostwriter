@@ -4,7 +4,6 @@ from enum import StrEnum
 from typing import Literal
 
 from langchain_core.messages import AIMessage, HumanMessage
-from langgraph.graph import END
 
 from ghostwriter_agent.core.state import AgentState
 
@@ -29,5 +28,5 @@ def route_after_human(state: AgentState) -> Literal[NodeName.AGENT, "__end__"]:
     """End the conversation on the quit command, otherwise let the agent answer."""
     last_message = state.messages[-1]
     if isinstance(last_message, HumanMessage) and last_message.text.strip() == QUIT_COMMAND:
-        return END
+        return "__end__"  # langgraph's END, but typed as a literal
     return NodeName.AGENT
