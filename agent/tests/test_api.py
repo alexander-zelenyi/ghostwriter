@@ -6,7 +6,7 @@ from langchain_core.messages import AIMessage
 from ghostwriter_agent.api.app import create_app
 from ghostwriter_agent.application import AgentService
 from ghostwriter_agent.core import QUIT_COMMAND
-from tests.conftest import ServiceFactory, api_client
+from tests.conftest import ServiceFactory, api_client, make_settings
 
 URL = "/v1/threads/thread-1/messages"
 
@@ -68,7 +68,7 @@ async def test_lifespan_opens_and_closes_the_service(make_service: ServiceFactor
         yield service
         events.append("closed")
 
-    app = create_app(service_factory=service_factory)
+    app = create_app(make_settings(), service_factory=service_factory)
     async with app.router.lifespan_context(app):
         assert events == ["opened"]
 

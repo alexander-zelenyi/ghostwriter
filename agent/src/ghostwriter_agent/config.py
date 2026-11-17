@@ -23,13 +23,14 @@ class Settings(BaseSettings):
 
     llm_model: str = Field(validation_alias="LANGUAGE_MODEL_NAME")
     llm_provider: str = Field(validation_alias="LANGUAGE_MODEL_PROVIDER")
-    llm_api_key: SecretStr = Field(validation_alias="API_TOKEN")
+    llm_api_key: SecretStr = Field(validation_alias="LANGUAGE_MODEL_API_KEY")
     llm_timeout: PositiveFloat = Field(default=30.0, validation_alias="LANGUAGE_MODEL_TIMEOUT")
     llm_max_retries: NonNegativeInt = Field(
         default=2, validation_alias="LANGUAGE_MODEL_MAX_RETRIES"
     )
     owner_name: str = Field(default="the account owner", validation_alias="OWNER_NAME")
     prompts_dir: Path = Field(default=Path("prompts"), validation_alias="PROMPTS_DIR")
+    api_token: SecretStr = Field(min_length=32, validation_alias="AGENT_API_TOKEN")
 
     @property
     def llm(self) -> LLMSettings:
