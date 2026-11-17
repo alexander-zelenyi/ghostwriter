@@ -13,6 +13,7 @@ ghostwriter_agent/
 ├── adapters/      implementations of ports (system clock, YAML prompts, LLM, later Postgres)
 ├── tools/         tools the LLM can call
 ├── application/   AgentService (the API of the agent for the outside world) and its ports
+├── api/           FastAPI app: the HTTP entry point the bot calls
 ├── config.py      settings from environment variables
 └── bootstrap.py   composition root: wires adapters into the core
 ```
@@ -25,6 +26,9 @@ bootstrap ──> adapters ──> ports <── core <── application
     │             └───────────────────┼───────────┘  (application ports)
     └──> tools ───────────────────────┘
 ```
+
+`api/` and `scripts/chat.py` are entry points on top of this: they import only
+`application` and `bootstrap` and know nothing about LangGraph.
 
 There are two kinds of ports. `ports/` holds what the core (graph, tools) needs;
 `application/ports.py` holds what `AgentService` needs, such as `ProcessedMessages`.
@@ -111,6 +115,46 @@ with LangGraph's `RetryPolicy`, so attempts do not multiply. If the model still 
 count as model failures is decided by the LLM adapter (`adapters.LLM_ERRORS`) and passed to the
 service in `bootstrap.py`, so the application layer does not import the provider SDK. Other
 exceptions (bugs) are not wrapped.
+
+## HTTP API
+
+The bot runs in a separate container and talks to the agent over HTTP. The API is a thin
+layer of its own (`api/`), not LangGraph Server, so the bot does not depend on LangGraph concepts.
+
+| Endpoint | Token | What it does |
+|---|---|---|
+| `POST /v1/threads/{thread_id}/messages` | yes | `{"message_id", "text"}` → `{"status": "replied" \| "no_reply", "reply": {"text"} \| null}` |
+| `GET /livez` | no | liveness: the process answers; checks nothing else |
+| `GET /readyz` | no | readiness: the agent can take requests; later pings the database, never the LLM |
+
+- **DTOs** (`api/schemas.py`) are separate from `AgentReply`, so the HTTP contract and the
+  service change independently. The contract is synchronous: request in, reply out.
+- **Wiring.** `create_app(settings, service_factory=...)` opens the service in the FastAPI
+  `lifespan` (`build_agent_service` is an async context manager); tests pass a factory with fakes.
+- **Auth.** `/v1` requires `Authorization: Bearer <AGENT_API_TOKEN>`, a secret shared with the
+  bot, compared with `secrets.compare_digest`. Health checks are outside `/v1`, without a token,
+  and are filtered out of the uvicorn access log.
+- **Errors** have one format, `{"error": {"code", "message", "details"?}}` (`api/errors.py`):
+
+  | Code | Status | When |
+  |---|---|---|
+  | `invalid_request` | 422 | body or path fails validation; `details` lists the fields, not the input |
+  | `unauthorized` | 401 | no token or a wrong one |
+  | `llm_unavailable` | 503 + `Retry-After` | `AgentUnavailableError`; the message can be retried |
+  | `internal_error` | 500 | a bug; no details in the response, the traceback goes to the log |
+
+- **One process.** The per-thread lock is in-process, so the API runs as one uvicorn worker
+  and one replica until the lock moves to Postgres.
+
+## Container
+
+`agent/Dockerfile` is a two-stage build. The builder stage installs dependencies with
+`uv sync --locked --no-dev` (a separate layer, rebuilt only when `uv.lock` changes) and then the
+project itself, non-editable. The runtime stage gets only `.venv` and `prompts/`, runs as a
+non-root user, starts uvicorn in exec form (so `docker stop` shuts the lifespan down cleanly) and
+has a `HEALTHCHECK` on `/readyz`. `.dockerignore` is an allowlist, so `.env` never gets into the
+image; settings come from the environment at `docker run`. CI builds the image and waits for the
+container to become healthy after every merge to `main`.
 
 ## How SOLID shows up
 

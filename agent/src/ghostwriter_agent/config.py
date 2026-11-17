@@ -19,7 +19,8 @@ class LLMSettings(BaseModel):
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    # hide_input_in_errors: a validation error would otherwise print secrets to the log.
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore", hide_input_in_errors=True)
 
     llm_model: str = Field(validation_alias="LANGUAGE_MODEL_NAME")
     llm_provider: str = Field(validation_alias="LANGUAGE_MODEL_PROVIDER")

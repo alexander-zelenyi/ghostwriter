@@ -1,0 +1,7 @@
+# Allowlist: anything not listed here (.env, .venv, caches, tests) stays out of the build context.
+*
+!pyproject.toml
+!uv.lock
+!src/
+!prompts/
+**/__pycache__/
