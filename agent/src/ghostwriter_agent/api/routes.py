@@ -1,8 +1,8 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Path
+from fastapi import APIRouter, Depends, Path
 
-from ghostwriter_agent.api.dependencies import AgentServiceDep
+from ghostwriter_agent.api.dependencies import AgentServiceDep, require_token
 from ghostwriter_agent.api.schemas import (
     ErrorResponse,
     MessageResponse,
@@ -12,7 +12,13 @@ from ghostwriter_agent.api.schemas import (
 )
 from ghostwriter_agent.application import AgentReply
 
-router = APIRouter(prefix="/v1")
+router = APIRouter(
+    prefix="/v1",
+    dependencies=[Depends(require_token)],
+    responses={
+        401: {"model": ErrorResponse, "description": "Missing or invalid token (`unauthorized`)."}
+    },
+)
 
 ThreadId = Annotated[str, Path(min_length=1, max_length=128, description="One conversation.")]
 

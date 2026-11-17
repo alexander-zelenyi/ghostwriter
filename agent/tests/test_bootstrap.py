@@ -2,19 +2,7 @@ from langgraph.checkpoint.memory import InMemorySaver
 
 from ghostwriter_agent.application import AgentService
 from ghostwriter_agent.bootstrap import build_agent_service
-from ghostwriter_agent.config import Settings
-from tests.conftest import OWNER_NAME, PROMPTS_DIR
-
-
-def make_settings() -> Settings:
-    return Settings(  # type: ignore[call-arg]  # fields are passed by their env aliases
-        LANGUAGE_MODEL_NAME="deepseek-chat",
-        LANGUAGE_MODEL_PROVIDER="deepseek",
-        API_TOKEN="fake-key",
-        OWNER_NAME=OWNER_NAME,
-        PROMPTS_DIR=PROMPTS_DIR,
-        _env_file=None,
-    )
+from tests.conftest import make_settings
 
 
 def test_llm_timeout_and_retries_have_defaults() -> None:

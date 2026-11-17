@@ -21,10 +21,13 @@ from ghostwriter_agent.config import Settings
 type ServiceFactory = Callable[[], AbstractAsyncContextManager[AgentService]]
 
 
-def create_app(service_factory: ServiceFactory | None = None) -> FastAPI:
+def create_app(
+    settings: Settings | None = None, *, service_factory: ServiceFactory | None = None
+) -> FastAPI:
     """Create the app. Tests pass a `service_factory` with fakes instead of the real LLM."""
-    if service_factory is None:
+    if settings is None:
         settings = Settings()  # type: ignore[call-arg]  # values come from env
+    if service_factory is None:
         service_factory = partial(build_agent_service, settings)
 
     @asynccontextmanager
@@ -34,6 +37,7 @@ def create_app(service_factory: ServiceFactory | None = None) -> FastAPI:
             yield
 
     app = FastAPI(title="Ghostwriter agent", version="0.1.0", lifespan=lifespan)
+    app.state.api_token = settings.api_token
     register_error_handlers(app)
     app.include_router(router)
     return app

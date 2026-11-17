@@ -41,7 +41,7 @@ class FieldError(BaseModel):
 class ErrorDetail(BaseModel):
     code: str = Field(
         description="`invalid_request`, `llm_unavailable`, `internal_error`, or the snake_case "
-        "name of the HTTP status (`not_found`, `method_not_allowed`, ...)."
+        "name of the HTTP status (`unauthorized`, `not_found`, ...)."
     )
     message: str
     details: list[FieldError] | None = Field(
