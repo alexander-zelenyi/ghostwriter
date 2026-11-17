@@ -48,3 +48,43 @@ jobs:
 
       - name: Tests
         run: uv run pytest
+
+  # Builds the image and checks that the container becomes healthy.
+  # Only after a merge to main: pull requests run the `checks` job alone.
+  docker:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: agent
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build image
+        run: docker build -t ghostwriter-agent:ci .
+
+      - name: Start container
+        # Fake LLM key: the container must start and answer health checks without calling the LLM.
+        run: >
+          docker run -d --name agent
+          -e LANGUAGE_MODEL_NAME=deepseek-chat
+          -e LANGUAGE_MODEL_PROVIDER=deepseek
+          -e LANGUAGE_MODEL_API_KEY=fake-key
+          -e AGENT_API_TOKEN=ci-token-0123456789abcdefghijklmnopqrstuv
+          ghostwriter-agent:ci
+
+      - name: Wait until healthy
+        run: |
+          for _ in $(seq 1 30); do
+            # A container that exited (e.g. invalid settings) keeps its last health status.
+            [ "$(docker inspect --format '{{.State.Running}}' agent)" = true ] || break
+            status=$(docker inspect --format '{{.State.Health.Status}}' agent)
+            echo "health: $status"
+            [ "$status" = healthy ] && exit 0
+            [ "$status" = unhealthy ] && break
+            sleep 2
+          done
+          docker logs agent
+          exit 1
